@@ -1,4 +1,4 @@
-// +build linux,amd64
+// +build linux
 
 package devmapper
 
@@ -8,8 +8,11 @@ import (
 	"os"
 	"path"
 
-	"github.com/dotcloud/docker/daemon/graphdriver"
-	"github.com/dotcloud/docker/utils"
+	log "github.com/Sirupsen/logrus"
+	"github.com/docker/docker/daemon/graphdriver"
+	"github.com/docker/docker/pkg/devicemapper"
+	"github.com/docker/docker/pkg/mount"
+	"github.com/docker/docker/pkg/units"
 )
 
 func init() {
@@ -26,16 +29,22 @@ type Driver struct {
 	home string
 }
 
-func Init(home string) (graphdriver.Driver, error) {
-	deviceSet, err := NewDeviceSet(home, true)
+func Init(home string, options []string) (graphdriver.Driver, error) {
+	deviceSet, err := NewDeviceSet(home, true, options)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := mount.MakePrivate(home); err != nil {
+		return nil, err
+	}
+
 	d := &Driver{
 		DeviceSet: deviceSet,
 		home:      home,
 	}
-	return d, nil
+
+	return graphdriver.NaiveDiffDriver(d), nil
 }
 
 func (d *Driver) String() string {
@@ -47,18 +56,28 @@ func (d *Driver) Status() [][2]string {
 
 	status := [][2]string{
 		{"Pool Name", s.PoolName},
+		{"Pool Blocksize", fmt.Sprintf("%s", units.HumanSize(int64(s.SectorSize)))},
 		{"Data file", s.DataLoopback},
 		{"Metadata file", s.MetadataLoopback},
-		{"Data Space Used", fmt.Sprintf("%.1f Mb", float64(s.Data.Used)/(1024*1024))},
-		{"Data Space Total", fmt.Sprintf("%.1f Mb", float64(s.Data.Total)/(1024*1024))},
-		{"Metadata Space Used", fmt.Sprintf("%.1f Mb", float64(s.Metadata.Used)/(1024*1024))},
-		{"Metadata Space Total", fmt.Sprintf("%.1f Mb", float64(s.Metadata.Total)/(1024*1024))},
+		{"Data Space Used", fmt.Sprintf("%s", units.HumanSize(int64(s.Data.Used)))},
+		{"Data Space Total", fmt.Sprintf("%s", units.HumanSize(int64(s.Data.Total)))},
+		{"Metadata Space Used", fmt.Sprintf("%s", units.HumanSize(int64(s.Metadata.Used)))},
+		{"Metadata Space Total", fmt.Sprintf("%s", units.HumanSize(int64(s.Metadata.Total)))},
+	}
+	if vStr, err := devicemapper.GetLibraryVersion(); err == nil {
+		status = append(status, [2]string{"Library Version", vStr})
 	}
 	return status
 }
 
 func (d *Driver) Cleanup() error {
-	return d.DeviceSet.Shutdown()
+	err := d.DeviceSet.Shutdown()
+
+	if err2 := mount.Unmount(d.home); err == nil {
+		err = err2
+	}
+
+	return err
 }
 
 func (d *Driver) Create(id, parent string) error {
@@ -124,7 +143,7 @@ func (d *Driver) Get(id, mountLabel string) (string, error) {
 
 func (d *Driver) Put(id string) {
 	if err := d.DeviceSet.UnmountDevice(id); err != nil {
-		utils.Errorf("Warning: error unmounting device %s: %s\n", id, err)
+		log.Errorf("Warning: error unmounting device %s: %s", id, err)
 	}
 }
 

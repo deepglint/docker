@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dotcloud/docker/pkg/term"
-	"github.com/dotcloud/docker/pkg/units"
+	"github.com/docker/docker/pkg/term"
+	"github.com/docker/docker/pkg/timeutils"
+	"github.com/docker/docker/pkg/units"
 )
 
 type JSONError struct {
@@ -50,7 +51,12 @@ func (p *JSONProgress) String() string {
 	total := units.HumanSize(int64(p.Total))
 	percentage := int(float64(p.Current)/float64(p.Total)*100) / 2
 	if width > 110 {
-		pbBox = fmt.Sprintf("[%s>%s] ", strings.Repeat("=", percentage), strings.Repeat(" ", 50-percentage))
+		// this number can't be negetive gh#7136
+		numSpaces := 0
+		if 50-percentage > 0 {
+			numSpaces = 50 - percentage
+		}
+		pbBox = fmt.Sprintf("[%s>%s] ", strings.Repeat("=", percentage), strings.Repeat(" ", numSpaces))
 	}
 	numbersBox = fmt.Sprintf("%8v/%v", current, total)
 
@@ -87,15 +93,15 @@ func (jm *JSONMessage) Display(out io.Writer, isTerminal bool) error {
 		return jm.Error
 	}
 	var endl string
-	if isTerminal && jm.Stream == "" {
+	if isTerminal && jm.Stream == "" && jm.Progress != nil {
 		// <ESC>[2K = erase entire current line
 		fmt.Fprintf(out, "%c[2K\r", 27)
 		endl = "\r"
-	} else if jm.Progress != nil { //disable progressbar in non-terminal
+	} else if jm.Progress != nil && jm.Progress.String() != "" { //disable progressbar in non-terminal
 		return nil
 	}
 	if jm.Time != 0 {
-		fmt.Fprintf(out, "[%s] ", time.Unix(jm.Time, 0))
+		fmt.Fprintf(out, "%s ", time.Unix(jm.Time, 0).Format(timeutils.RFC3339NanoFixed))
 	}
 	if jm.ID != "" {
 		fmt.Fprintf(out, "%s: ", jm.ID)
@@ -103,7 +109,7 @@ func (jm *JSONMessage) Display(out io.Writer, isTerminal bool) error {
 	if jm.From != "" {
 		fmt.Fprintf(out, "(from %s) ", jm.From)
 	}
-	if jm.Progress != nil {
+	if jm.Progress != nil && isTerminal {
 		fmt.Fprintf(out, "%s %s%s", jm.Status, jm.Progress.String(), endl)
 	} else if jm.ProgressMessage != "" { //deprecated
 		fmt.Fprintf(out, "%s %s%s", jm.Status, jm.ProgressMessage, endl)
@@ -138,7 +144,9 @@ func DisplayJSONMessagesStream(in io.Reader, out io.Writer, terminalFd uintptr, 
 			if !ok {
 				line = len(ids)
 				ids[jm.ID] = line
-				fmt.Fprintf(out, "\n")
+				if isTerminal {
+					fmt.Fprintf(out, "\n")
+				}
 				diff = 0
 			} else {
 				diff = len(ids) - line

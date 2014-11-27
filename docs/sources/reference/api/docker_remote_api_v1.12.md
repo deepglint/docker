@@ -6,13 +6,13 @@ page_keywords: API, Docker, rcli, REST, documentation
 
 ## 1. Brief introduction
 
- - The Remote API has replaced rcli
+ - The Remote API has replaced `rcli`.
  - The daemon listens on `unix:///var/run/docker.sock` but you can
-   [*Bind Docker to another host/port or a Unix socket*](
-   /use/basics/#bind-docker).
+   [Bind Docker to another host/port or a Unix socket](
+   /articles/basics/#bind-docker-to-another-hostport-or-a-unix-socket).
  - The API tends to be REST, but for some complex commands, like `attach`
-   or `pull`, the HTTP connection is hijacked to transport `stdout, stdin`
-   and `stderr`
+   or `pull`, the HTTP connection is hijacked to transport `STDOUT`,
+   `STDIN` and `STDERR`.
 
 # 2. Endpoints
 
@@ -24,11 +24,11 @@ page_keywords: API, Docker, rcli, REST, documentation
 
 List containers
 
-    **Example request**:
+**Example request**:
 
         GET /containers/json?all=1&before=8dfafdbc3a40&size=1 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -76,26 +76,26 @@ List containers
              }
         ]
 
-    Query Parameters:
+Query Parameters:
 
-     
-
-    -   **all** – 1/True/true or 0/False/false, Show all containers.
-        Only running containers are shown by default
-    -   **limit** – Show `limit` last created
+-   **all** – 1/True/true or 0/False/false, Show all containers.
+        Only running containers are shown by defaul
+-   **limit** – Show `limit` last created
         containers, include non-running ones.
-    -   **since** – Show only containers created since Id, include
+-   **since** – Show only containers created since Id, include
         non-running ones.
-    -   **before** – Show only containers created before Id, include
+-   **before** – Show only containers created before Id, include
         non-running ones.
-    -   **size** – 1/True/true or 0/False/false, Show the containers
+-   **size** – 1/True/true or 0/False/false, Show the containers
         sizes
+-   **filters** – a JSON encoded value of the filters (a map[string][]string)
+        to process on the images list.
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **400** – bad parameter
-    -   **500** – server error
+-   **200** – no error
+-   **400** – bad parameter
+-   **500** – server error
 
 ### Create a container
 
@@ -103,16 +103,19 @@ List containers
 
 Create a container
 
-    **Example request**:
+**Example request**:
 
         POST /containers/create HTTP/1.1
         Content-Type: application/json
 
         {
              "Hostname":"",
+             "Domainname": "",
              "User":"",
              "Memory":0,
              "MemorySwap":0,
+             "CpuShares": 512,
+             "Cpuset": "0,1",
              "AttachStdin":false,
              "AttachStdout":true,
              "AttachStderr":true,
@@ -124,22 +127,20 @@ Create a container
              "Cmd":[
                      "date"
              ],
-             "Dns":null,
              "Image":"base",
              "Volumes":{
                      "/tmp": {}
              },
-             "VolumesFrom":"",
              "WorkingDir":"",
-             "DisableNetwork": false,
+             "NetworkDisabled": false,
              "ExposedPorts":{
                      "22/tcp": {}
              }
         }
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 201 OK
+        HTTP/1.1 201 Created
         Content-Type: application/json
 
         {
@@ -147,25 +148,23 @@ Create a container
              "Warnings":[]
         }
 
-    Json Parameters:
+Json Parameters:
+
+-   **config** – the container's configuration
+
+Query Parameters:
 
      
 
-    -   **config** – the container's configuration
-
-    Query Parameters:
-
-     
-
-    -   **name** – Assign the specified name to the container. Must
+-   **name** – Assign the specified name to the container. Mus
         match `/?[a-zA-Z0-9_-]+`.
 
-    Status Codes:
+Status Codes:
 
-    -   **201** – no error
-    -   **404** – no such container
-    -   **406** – impossible to attach (container not running)
-    -   **500** – server error
+-   **201** – no error
+-   **404** – no such container
+-   **406** – impossible to attach (container not running)
+-   **500** – server error
 
 ### Inspect a container
 
@@ -174,11 +173,11 @@ Create a container
 Return low-level information on the container `id`
 
 
-    **Example request**:
+**Example request**:
 
         GET /containers/4fa6e0f0c678/json HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -226,7 +225,7 @@ Return low-level information on the container `id`
                              "Bridge": "",
                              "PortMapping": null
                      },
-                     "SysInitPath": "/home/kitty/go/src/github.com/dotcloud/docker/bin/docker",
+                     "SysInitPath": "/home/kitty/go/src/github.com/docker/docker/bin/docker",
                      "ResolvConfPath": "/etc/resolv.conf",
                      "Volumes": {},
                      "HostConfig": {
@@ -247,11 +246,11 @@ Return low-level information on the container `id`
                      }
         }
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### List processes running inside a container
 
@@ -259,11 +258,11 @@ Return low-level information on the container `id`
 
 List processes running inside the container `id`
 
-    **Example request**:
+**Example request**:
 
         GET /containers/4fa6e0f0c678/top HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -288,17 +287,15 @@ List processes running inside the container `id`
              ]
         }
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **ps_args** – ps arguments to use (e.g., aux)
 
-    -   **ps_args** – ps arguments to use (eg. aux)
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Get container logs
 
@@ -306,35 +303,35 @@ List processes running inside the container `id`
 
 Get stdout and stderr logs from the container ``id``
 
-    **Example request**:
+**Example request**:
 
        GET /containers/4fa6e0f0c678/logs?stderr=1&stdout=1&timestamps=1&follow=1 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
        HTTP/1.1 200 OK
        Content-Type: application/vnd.docker.raw-stream
 
        {{ STREAM }}
 
-    Query Parameters:
+Query Parameters:
 
      
 
-    -   **follow** – 1/True/true or 0/False/false, return stream.
+-   **follow** – 1/True/true or 0/False/false, return stream.
         Default false
-    -   **stdout** – 1/True/true or 0/False/false, if logs=true, return
+-   **stdout** – 1/True/true or 0/False/false, if logs=true, return
         stdout log. Default false
-    -   **stderr** – 1/True/true or 0/False/false, if logs=true, return
+-   **stderr** – 1/True/true or 0/False/false, if logs=true, return
         stderr log. Default false
-    -   **timestamps** – 1/True/true or 0/False/false, if logs=true, print
+-   **timestamps** – 1/True/true or 0/False/false, if logs=true, prin
         timestamps for every log line. Default false
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Inspect changes on a container's filesystem
 
@@ -342,11 +339,11 @@ Get stdout and stderr logs from the container ``id``
 
 Inspect changes on container `id`'s filesystem
 
-    **Example request**:
+**Example request**:
 
         GET /containers/4fa6e0f0c678/changes HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -366,11 +363,11 @@ Inspect changes on container `id`'s filesystem
              }
         ]
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Export a container
 
@@ -378,22 +375,22 @@ Inspect changes on container `id`'s filesystem
 
 Export the contents of container `id`
 
-    **Example request**:
+**Example request**:
 
         GET /containers/4fa6e0f0c678/export HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/octet-stream
 
-        {{ STREAM }}
+        {{ TAR STREAM }}
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Start a container
 
@@ -401,35 +398,38 @@ Export the contents of container `id`
 
 Start the container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/(id)/start HTTP/1.1
         Content-Type: application/json
 
         {
              "Binds":["/tmp:/tmp"],
-             "LxcConf":{"lxc.utsname":"docker"},
+             "Links":["redis3:redis"],
+             "LxcConf":[{"Key":"lxc.utsname","Value":"docker"}],
              "PortBindings":{ "22/tcp": [{ "HostPort": "11022" }] },
              "PublishAllPorts":false,
-             "Privileged":false
+             "Privileged":false,
+             "Dns": ["8.8.8.8"],
+             "VolumesFrom": ["parent", "other:ro"]
         }
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 204 No Content
         Content-Type: text/plain
 
-    Json Parameters:
+Json Parameters:
 
      
 
-    -   **hostConfig** – the container's host configuration (optional)
+-   **hostConfig** – the container's host configuration (optional)
 
-    Status Codes:
+Status Codes:
 
-    -   **204** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Stop a container
 
@@ -437,25 +437,23 @@ Start the container `id`
 
 Stop the container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/e90e34656806/stop?t=5 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 No Content
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **t** – number of seconds to wait before killing the container
 
-    -   **t** – number of seconds to wait before killing the container
+Status Codes:
 
-    Status Codes:
-
-    -   **204** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Restart a container
 
@@ -463,25 +461,23 @@ Stop the container `id`
 
 Restart the container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/e90e34656806/restart?t=5 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 No Content
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **t** – number of seconds to wait before killing the container
 
-    -   **t** – number of seconds to wait before killing the container
+Status Codes:
 
-    Status Codes:
-
-    -   **204** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Kill a container
 
@@ -489,24 +485,64 @@ Restart the container `id`
 
 Kill the container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/e90e34656806/kill HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 No Content
 
-    Query Parameters
+Query Parameters
 
-    -   **signal** - Signal to send to the container: integer or string like "SIGINT".
-        When not set, SIGKILL is assumed and the call will waits for the container to exit.
+-   **signal** - Signal to send to the container: integer or string like "SIGINT".
+    When not set, SIGKILL is assumed and the call will wait for the container to exit.
 
-    Status Codes:
+Status Codes:
 
-    -   **204** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
+
+### Pause a container
+
+`POST /containers/(id)/pause`
+
+Pause the container `id`
+
+**Example request**:
+
+        POST /containers/e90e34656806/pause HTTP/1.1
+
+**Example response**:
+
+        HTTP/1.1 204 No Content
+
+Status Codes:
+
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
+
+### Unpause a container
+
+`POST /containers/(id)/unpause`
+
+Unpause the container `id`
+
+**Example request**:
+
+        POST /containers/e90e34656806/unpause HTTP/1.1
+
+**Example response**:
+
+        HTTP/1.1 204 No Content
+
+Status Codes:
+
+-   **204** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Attach to a container
 
@@ -514,38 +550,34 @@ Kill the container `id`
 
 Attach to the container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/16253994b7c4/attach?logs=1&stream=0&stdout=1 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/vnd.docker.raw-stream
 
         {{ STREAM }}
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **logs** – 1/True/true or 0/False/false, return logs. Default false
+-   **stream** – 1/True/true or 0/False/false, return stream. Default false
+-   **stdin** – 1/True/true or 0/False/false, if stream=true, attach to stdin.
+    Default false
+-   **stdout** – 1/True/true or 0/False/false, if logs=true, return
+    stdout log, if stream=true, attach to stdout. Default false
+-   **stderr** – 1/True/true or 0/False/false, if logs=true, return
+    stderr log, if stream=true, attach to stderr. Default false
 
-    -   **logs** – 1/True/true or 0/False/false, return logs. Default
-        false
-    -   **stream** – 1/True/true or 0/False/false, return stream.
-        Default false
-    -   **stdin** – 1/True/true or 0/False/false, if stream=true, attach
-        to stdin. Default false
-    -   **stdout** – 1/True/true or 0/False/false, if logs=true, return
-        stdout log, if stream=true, attach to stdout. Default false
-    -   **stderr** – 1/True/true or 0/False/false, if logs=true, return
-        stderr log, if stream=true, attach to stderr. Default false
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **400** – bad parameter
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **400** – bad parameter
+-   **404** – no such container
+-   **500** – server error
 
     **Stream details**:
 
@@ -570,9 +602,9 @@ Attach to the container `id`
 
     `STREAM_TYPE` can be:
 
-    -   0: stdin (will be writen on stdout)
-    -   1: stdout
-    -   2: stderr
+-   0: stdin (will be written on stdout)
+-   1: stdout
+-   2: stderr
 
     `SIZE1, SIZE2, SIZE3, SIZE4` are the 4 bytes of
     the uint32 size encoded as big endian.
@@ -589,7 +621,7 @@ Attach to the container `id`
     2.  chose stdout or stderr depending on the first byte
     3.  Extract the frame size from the last 4 byets
     4.  Read the extracted size and output it on the correct output
-    5.  Goto 1)
+    5.  Goto 1
 
 ### Wait a container
 
@@ -597,22 +629,22 @@ Attach to the container `id`
 
 Block until container `id` stops, then returns the exit code
 
-    **Example request**:
+**Example request**:
 
         POST /containers/16253994b7c4/wait HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
 
         {"StatusCode":0}
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Remove a container
 
@@ -620,29 +652,27 @@ Block until container `id` stops, then returns the exit code
 
 Remove the container `id` from the filesystem
 
-    **Example request**:
+**Example request**:
 
         DELETE /containers/16253994b7c4?v=1 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 204 OK
+        HTTP/1.1 204 No Content
 
-    Query Parameters:
+Query Parameters:
 
-     
-
-    -   **v** – 1/True/true or 0/False/false, Remove the volumes
+-   **v** – 1/True/true or 0/False/false, Remove the volumes
         associated to the container. Default false
-    -   **force** – 1/True/true or 0/False/false, Removes the container
+-   **force** – 1/True/true or 0/False/false, Removes the container
         even if it was running. Default false
 
-    Status Codes:
+Status Codes:
 
-    -   **204** – no error
-    -   **400** – bad parameter
-    -   **404** – no such container
-    -   **500** – server error
+-   **204** – no error
+-   **400** – bad parameter
+-   **404** – no such container
+-   **500** – server error
 
 ### Copy files or folders from a container
 
@@ -650,7 +680,7 @@ Remove the container `id` from the filesystem
 
 Copy files or folders of container `id`
 
-    **Example request**:
+**Example request**:
 
         POST /containers/4fa6e0f0c678/copy HTTP/1.1
         Content-Type: application/json
@@ -659,18 +689,18 @@ Copy files or folders of container `id`
              "Resource":"test.txt"
         }
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/octet-stream
 
-        {{ STREAM }}
+        {{ TAR STREAM }}
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ## 2.2 Images
 
@@ -682,7 +712,7 @@ Copy files or folders of container `id`
 
         GET /images/json?all=0 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -712,17 +742,27 @@ Copy files or folders of container `id`
           }
         ]
 
+
+Query Parameters:
+
+     
+
+-   **all** – 1/True/true or 0/False/false, default false
+-   **filters** – a JSON encoded value of the filters (a map[string][]string) to process on the images list.
+
+
+
 ### Create an image
 
 `POST /images/create`
 
-Create an image, either by pull it from the registry or by importing it
+Create an image, either by pull it from the registry or by importing i
 
-    **Example request**:
+**Example request**:
 
         POST /images/create?fromImage=base HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -736,51 +776,24 @@ Create an image, either by pull it from the registry or by importing it
     `X-Registry-Auth` header can be used to include
     a base64-encoded AuthConfig object.
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **fromImage** – name of the image to pull
+-   **fromSrc** – source to import, - means stdin
+-   **repo** – repository
+-   **tag** – tag
+-   **registry** – the registry to pull from
 
-    -   **fromImage** – name of the image to pull
-    -   **fromSrc** – source to import, - means stdin
-    -   **repo** – repository
-    -   **tag** – tag
-    -   **registry** – the registry to pull from
+Request Headers:
 
-    Request Headers:
+-   **X-Registry-Auth** – base64-encoded AuthConfig object
 
-     
+Status Codes:
 
-    -   **X-Registry-Auth** – base64-encoded AuthConfig object
+-   **200** – no error
+-   **500** – server error
 
-    Status Codes:
 
-    -   **200** – no error
-    -   **500** – server error
-
-### Insert a file in an image
-
-`POST /images/(name)/insert`
-
-Insert a file from `url` in the image `name` at `path`
-
-    **Example request**:
-
-        POST /images/test/insert?path=/usr&url=myurl HTTP/1.1
-
-    **Example response**:
-
-        HTTP/1.1 200 OK
-        Content-Type: application/json
-
-        {"status":"Inserting..."}
-        {"status":"Inserting", "progress":"1/? (n/a)", "progressDetail":{"current":1}}
-        {"error":"Invalid..."}
-        ...
-
-    Status Codes:
-
-    -   **200** – no error
-    -   **500** – server error
 
 ### Inspect an image
 
@@ -788,21 +801,19 @@ Insert a file from `url` in the image `name` at `path`
 
 Return low-level information on the image `name`
 
-    **Example request**:
+**Example request**:
 
         GET /images/base/json HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
 
         {
-             "id":"b750fe79269d2ec9a3c593ef05b4332b1d1a02a62b4accb2c21d589ff2f5f2dc",
-             "parent":"27cf784147099545",
-             "created":"2013-03-23T22:24:18.818426-07:00",
-             "container":"3d67245a8d72ecf13f33dffac9f79dcdf70f75acb84d308770391510e0c23ad0",
-             "container_config":
+             "Created":"2013-03-23T22:24:18.818426-07:00",
+             "Container":"3d67245a8d72ecf13f33dffac9f79dcdf70f75acb84d308770391510e0c23ad0",
+             "ContainerConfig":
                      {
                              "Hostname":"",
                              "User":"",
@@ -816,21 +827,23 @@ Return low-level information on the image `name`
                              "OpenStdin":true,
                              "StdinOnce":false,
                              "Env":null,
-                             "Cmd": ["/bin/bash"]
-                             ,"Dns":null,
+                             "Cmd": ["/bin/bash"],
+                             "Dns":null,
                              "Image":"base",
                              "Volumes":null,
                              "VolumesFrom":"",
                              "WorkingDir":""
                      },
+             "Id":"b750fe79269d2ec9a3c593ef05b4332b1d1a02a62b4accb2c21d589ff2f5f2dc",
+             "Parent":"27cf784147099545",
              "Size": 6824592
         }
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such image
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such image
+-   **500** – server error
 
 ### Get the history of an image
 
@@ -838,11 +851,11 @@ Return low-level information on the image `name`
 
 Return the history of the image `name`
 
-    **Example request**:
+**Example request**:
 
         GET /images/base/history HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -860,11 +873,11 @@ Return the history of the image `name`
              }
         ]
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **404** – no such image
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such image
+-   **500** – server error
 
 ### Push an image on the registry
 
@@ -872,11 +885,11 @@ Return the history of the image `name`
 
 Push the image `name` on the registry
 
-    **Example request**:
+**Example request**:
 
         POST /images/test/push HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -886,24 +899,28 @@ Push the image `name` on the registry
         {"error":"Invalid..."}
         ...
 
-    Query Parameters:
+    If you wish to push an image on to a private registry, that image must already have been tagged
+    into a repository which references that registry host name and port.  This repository name should
+    then be used in the URL. This mirrors the flow of the CLI.
 
-     
+**Example request**:
 
-    -   **registry** – the registry you wan to push, optional
+        POST /images/registry.acme.com:5000/test/push HTTP/1.1
 
-    Request Headers:
 
-     
+Query Parameters:
 
-    -   **X-Registry-Auth** – include a base64-encoded AuthConfig
-        object.
+-   **tag** – the tag to associate with the image on the registry, optional
 
-    Status Codes:
+Request Headers:
 
-    -   **200** – no error
-    -   **404** – no such image
-    -   **500** – server error
+-   **X-Registry-Auth** – include a base64-encoded AuthConfig object.
+
+Status Codes:
+
+-   **200** – no error
+-   **404** – no such image
+-   **500** – server error
 
 ### Tag an image into a repository
 
@@ -911,28 +928,27 @@ Push the image `name` on the registry
 
 Tag the image `name` into a repository
 
-    **Example request**:
+**Example request**:
 
-        POST /images/test/tag?repo=myrepo&force=0 HTTP/1.1
+        POST /images/test/tag?repo=myrepo&force=0&tag=v42 HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 201 OK
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **repo** – The repository to tag in
+-   **force** – 1/True/true or 0/False/false, default false
+-   **tag** - The new tag name
 
-    -   **repo** – The repository to tag in
-    -   **force** – 1/True/true or 0/False/false, default false
+Status Codes:
 
-    Status Codes:
-
-    -   **201** – no error
-    -   **400** – bad parameter
-    -   **404** – no such image
-    -   **409** – conflict
-    -   **500** – server error
+-   **201** – no error
+-   **400** – bad parameter
+-   **404** – no such image
+-   **409** – conflict
+-   **500** – server error
 
 ### Remove an image
 
@@ -940,11 +956,11 @@ Tag the image `name` into a repository
 
 Remove the image `name` from the filesystem
 
-    **Example request**:
+**Example request**:
 
         DELETE /images/test HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-type: application/json
@@ -955,35 +971,33 @@ Remove the image `name` from the filesystem
          {"Deleted":"53b4f83ac9"}
         ]
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **force** – 1/True/true or 0/False/false, default false
+-   **noprune** – 1/True/true or 0/False/false, default false
 
-    -   **force** – 1/True/true or 0/False/false, default false
-    -   **noprune** – 1/True/true or 0/False/false, default false
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **404** – no such image
-    -   **409** – conflict
-    -   **500** – server error
+-   **200** – no error
+-   **404** – no such image
+-   **409** – conflict
+-   **500** – server error
 
 ### Search images
 
 `GET /images/search`
 
-Search for an image on [Docker.io](https://index.docker.io).
+Search for an image on [Docker Hub](https://hub.docker.com).
 
 > **Note**:
 > The response keys have changed from API v1.6 to reflect the JSON
 > sent by the registry server to the docker daemon's request.
 
-    **Example request**:
+**Example request**:
 
         GET /images/search?term=sshd HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -992,37 +1006,35 @@ Search for an image on [Docker.io](https://index.docker.io).
                 {
                     "description": "",
                     "is_official": false,
-                    "is_trusted": false,
+                    "is_automated": false,
                     "name": "wma55/u1210sshd",
                     "star_count": 0
                 },
                 {
                     "description": "",
                     "is_official": false,
-                    "is_trusted": false,
+                    "is_automated": false,
                     "name": "jdswinbank/sshd",
                     "star_count": 0
                 },
                 {
                     "description": "",
                     "is_official": false,
-                    "is_trusted": false,
+                    "is_automated": false,
                     "name": "vgauthier/sshd",
                     "star_count": 0
                 }
         ...
         ]
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **term** – term to search
 
-    -   **term** – term to search
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ## 2.3 Misc
 
@@ -1032,13 +1044,13 @@ Search for an image on [Docker.io](https://index.docker.io).
 
 Build an image from Dockerfile via stdin
 
-    **Example request**:
+**Example request**:
 
         POST /build HTTP/1.1
 
-        {{ STREAM }}
+        {{ TAR STREAM }}
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -1055,29 +1067,24 @@ Build an image from Dockerfile via stdin
     which will be accessible in the build context (See the [*ADD build
     command*](/reference/builder/#dockerbuilder)).
 
-    Query Parameters:
+Query Parameters:
 
-     
-
-    -   **t** – repository name (and optionally a tag) to be applied to
-        the resulting image in case of success
-    -   **q** – suppress verbose build output
-    -   **nocache** – do not use the cache when building the image
-    -   **rm** - remove intermediate containers after a successful build (default behavior)
-    -   **forcerm - always remove intermediate containers (includes rm)
+-   **t** – repository name (and optionally a tag) to be applied to
+    the resulting image in case of success
+-   **q** – suppress verbose build output
+-   **nocache** – do not use the cache when building the image
+-   **rm** - remove intermediate containers after a successful build (default behavior)
+-   **forcerm - always remove intermediate containers (includes rm)
 
     Request Headers:
 
-     
+-   **Content-type** – should be set to `"application/tar"`.
+-   **X-Registry-Config** – base64-encoded ConfigFile objec
 
-    -   **Content-type** – should be set to
-        `"application/tar"`.
-    -   **X-Registry-Config** – base64-encoded ConfigFile object
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ### Check auth configuration
 
@@ -1085,7 +1092,7 @@ Build an image from Dockerfile via stdin
 
 Get the default username and email
 
-    **Example request**:
+**Example request**:
 
         POST /auth HTTP/1.1
         Content-Type: application/json
@@ -1097,15 +1104,15 @@ Get the default username and email
              "serveraddress":"https://index.docker.io/v1/"
         }
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **204** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **204** – no error
+-   **500** – server error
 
 ### Display system-wide information
 
@@ -1113,11 +1120,11 @@ Get the default username and email
 
 Display system-wide information
 
-    **Example request**:
+**Example request**:
 
         GET /info HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -1125,18 +1132,24 @@ Display system-wide information
         {
              "Containers":11,
              "Images":16,
+             "Driver":"btrfs",
+             "ExecutionDriver":"native-0.1",
+             "KernelVersion":"3.12.0-1-amd64"
              "Debug":false,
              "NFd": 11,
              "NGoroutines":21,
+             "NEventsListener":0,
+             "InitPath":"/usr/bin/docker",
+             "IndexServerAddress":["https://index.docker.io/v1/"],
              "MemoryLimit":true,
              "SwapLimit":false,
              "IPv4Forwarding":true
         }
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ### Show the docker version information
 
@@ -1144,25 +1157,26 @@ Display system-wide information
 
 Show the docker version information
 
-    **Example request**:
+**Example request**:
 
         GET /version HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
 
         {
+             "ApiVersion":"1.12",
              "Version":"0.2.2",
              "GitCommit":"5a2a5cc+CHANGES",
              "GoVersion":"go1.0.3"
         }
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ### Ping the docker server
 
@@ -1170,20 +1184,21 @@ Show the docker version information
 
 Ping the docker server
 
-    **Example request**:
+**Example request**:
 
         GET /_ping HTTP/1.1
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
+        Content-Type: text/plain
 
         OK
 
-    Status Codes:
+Status Codes:
 
-    -   **200** - no error
-    -   **500** - server error
+-   **200** - no error
+-   **500** - server error
 
 ### Create a new image from a container's changes
 
@@ -1191,16 +1206,19 @@ Ping the docker server
 
 Create a new image from a container's changes
 
-    **Example request**:
+**Example request**:
 
-        POST /commit?container=44c004db4b17&m=message&repo=myrepo HTTP/1.1
+        POST /commit?container=44c004db4b17&comment=message&repo=myrepo HTTP/1.1
         Content-Type: application/json
 
         {
              "Hostname":"",
+             "Domainname": "",
              "User":"",
              "Memory":0,
              "MemorySwap":0,
+             "CpuShares": 512,
+             "Cpuset": "0,1",
              "AttachStdin":false,
              "AttachStdout":true,
              "AttachStderr":true,
@@ -1216,54 +1234,58 @@ Create a new image from a container's changes
                      "/tmp": {}
              },
              "WorkingDir":"",
-             "DisableNetwork": false,
+             "NetworkDisabled": false,
              "ExposedPorts":{
                      "22/tcp": {}
              }
         }
 
-    **Example response**:
+**Example response**:
 
-        HTTP/1.1 201 OK
-            Content-Type: application/vnd.docker.raw-stream
+        HTTP/1.1 201 Created
+        Content-Type: application/vnd.docker.raw-stream
 
         {"Id":"596069db4bf5"}
 
-    Json Parameters:
+Json Parameters:
 
+-  **config** - the container's configuration
 
+Query Parameters:
 
-    -  **config** - the container's configuration
+-   **container** – source container
+-   **repo** – repository
+-   **tag** – tag
+-   **comment** – commit message
+-   **author** – author (e.g., "John Hannibal Smith
+    <[hannibal@a-team.com](mailto:hannibal%40a-team.com)>")
 
-    Query Parameters:
+Status Codes:
 
-     
-
-    -   **container** – source container
-    -   **repo** – repository
-    -   **tag** – tag
-    -   **m** – commit message
-    -   **author** – author (eg. "John Hannibal Smith
-        <[hannibal@a-team.com](mailto:hannibal%40a-team.com)>")
-
-    Status Codes:
-
-    -   **201** – no error
-    -   **404** – no such container
-    -   **500** – server error
+-   **201** – no error
+-   **404** – no such container
+-   **500** – server error
 
 ### Monitor Docker's events
 
 `GET /events`
 
-Get events from docker, either in real time via streaming, or
-via polling (using since)
+Get container events from docker, either in real time via streaming, or via
+polling (using since).
 
-    **Example request**:
+Docker containers will report the following events:
+
+    create, destroy, die, export, kill, pause, restart, start, stop, unpause
+
+and Docker images will report:
+
+    untag, delete
+
+**Example request**:
 
         GET /events?since=1374067924
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/json
@@ -1273,17 +1295,15 @@ via polling (using since)
         {"status":"stop","id":"dfdf82bd3881","from":"base:latest","time":1374067966}
         {"status":"destroy","id":"dfdf82bd3881","from":"base:latest","time":1374067970}
 
-    Query Parameters:
+Query Parameters:
 
-     
+-   **since** – timestamp used for polling
+-   **until** – timestamp used for polling
 
-    -   **since** – timestamp used for polling
-    -   **until** – timestamp used for polling
+Status Codes:
 
-    Status Codes:
-
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ### Get a tarball containing all images and tags in a repository
 
@@ -1292,52 +1312,76 @@ via polling (using since)
 Get a tarball containing all images and metadata for the repository
 specified by `name`.
 
-    **Example request**
+See the [image tarball format](#image-tarball-format) for more details.
+
+**Example request**
 
         GET /images/ubuntu/get
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
         Content-Type: application/x-tar
 
         Binary data stream
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
 
 ### Load a tarball with a set of images and tags into docker
 
 `POST /images/load`
 
 Load a set of images and tags into the docker repository.
+See the [image tarball format](#image-tarball-format) for more details.
 
-    **Example request**
+**Example request**
 
         POST /images/load
 
         Tarball in body
 
-    **Example response**:
+**Example response**:
 
         HTTP/1.1 200 OK
 
-    Status Codes:
+Status Codes:
 
-    -   **200** – no error
-    -   **500** – server error
+-   **200** – no error
+-   **500** – server error
+
+### Image tarball format
+
+An image tarball contains one directory per image layer (named using its long ID),
+each containing three files:
+
+1. `VERSION`: currently `1.0` - the file format version
+2. `json`: detailed layer information, similar to `docker inspect layer_id`
+3. `layer.tar`: A tarfile containing the filesystem changes in this layer
+
+The `layer.tar` file will contain `aufs` style `.wh..wh.aufs` files and directories
+for storing attribute changes and deletions.
+
+If the tarball defines a repository, there will also be a `repositories` file at
+the root that contains a list of repository and tag names mapped to layer IDs.
+
+```
+{"hello-world":
+    {"latest":"565a9d68a73f6706862bfe8409a7f659776d4d60a8d096eb4a3cbce6999cc2a1"}
+}
+```
 
 # 3. Going further
 
 ## 3.1 Inside `docker run`
 
-Here are the steps of `docker run`:
+As an example, the `docker run` command line makes the following API calls:
 
 - Create the container
 
-- If the status code is 404, it means the image doesn't exists:
+- If the status code is 404, it means the image doesn't exist:
     - Try to pull it
     - Then retry to create the container
 
@@ -1358,6 +1402,6 @@ stdout and stderr on the same socket. This might change in the future.
 ## 3.3 CORS Requests
 
 To enable cross origin requests to the remote api add the flag
-"–api-enable-cors" when running docker in daemon mode.
+"--api-enable-cors" when running docker in daemon mode.
 
-    $ docker -d -H="192.168.1.9:4243" --api-enable-cors
+    $ docker -d -H="192.168.1.9:2375" --api-enable-cors

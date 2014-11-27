@@ -1,21 +1,35 @@
 package graph
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 
-	"github.com/dotcloud/docker/engine"
-	"github.com/dotcloud/docker/image"
-	"github.com/dotcloud/docker/utils"
+	log "github.com/Sirupsen/logrus"
+	"github.com/docker/docker/engine"
+	"github.com/docker/docker/image"
 )
 
 func (s *TagStore) Install(eng *engine.Engine) error {
-	eng.Register("image_set", s.CmdSet)
-	eng.Register("image_tag", s.CmdTag)
-	eng.Register("image_get", s.CmdGet)
-	eng.Register("image_inspect", s.CmdLookup)
-	eng.Register("image_tarlayer", s.CmdTarLayer)
+	for name, handler := range map[string]engine.Handler{
+		"image_set":      s.CmdSet,
+		"image_tag":      s.CmdTag,
+		"tag":            s.CmdTagLegacy, // FIXME merge with "image_tag"
+		"image_get":      s.CmdGet,
+		"image_inspect":  s.CmdLookup,
+		"image_tarlayer": s.CmdTarLayer,
+		"image_export":   s.CmdImageExport,
+		"history":        s.CmdHistory,
+		"images":         s.CmdImages,
+		"viz":            s.CmdViz,
+		"load":           s.CmdLoad,
+		"import":         s.CmdImport,
+		"pull":           s.CmdPull,
+		"push":           s.CmdPush,
+	} {
+		if err := eng.Register(name, handler); err != nil {
+			return fmt.Errorf("Could not register %q: %v", name, err)
+		}
+	}
 	return nil
 }
 
@@ -60,30 +74,7 @@ func (s *TagStore) CmdSet(job *engine.Job) engine.Status {
 	if err != nil {
 		return job.Error(err)
 	}
-	if err := s.graph.Register(imgJSON, layer, img); err != nil {
-		return job.Error(err)
-	}
-	return engine.StatusOK
-}
-
-// CmdTag assigns a new name and tag to an existing image. If the tag already exists,
-// it is changed and the image previously referenced by the tag loses that reference.
-// This may cause the old image to be garbage-collected if its reference count reaches zero.
-//
-// Syntax: image_tag NEWNAME OLDNAME
-// Example: image_tag shykes/myapp:latest shykes/myapp:1.42.0
-func (s *TagStore) CmdTag(job *engine.Job) engine.Status {
-	if len(job.Args) != 2 {
-		return job.Errorf("usage: %s NEWNAME OLDNAME", job.Name)
-	}
-	var (
-		newName = job.Args[0]
-		oldName = job.Args[1]
-	)
-	newRepo, newTag := utils.ParseRepositoryTag(newName)
-	// FIXME: Set should either parse both old and new name, or neither.
-	// 	the current prototype is inconsistent.
-	if err := s.Set(newRepo, newTag, oldName, true); err != nil {
+	if err := s.graph.Register(img, layer); err != nil {
 		return job.Error(err)
 	}
 	return engine.StatusOK
@@ -117,12 +108,12 @@ func (s *TagStore) CmdGet(job *engine.Job) engine.Status {
 		//	- Comment: initially created to fulfill the "every image is a git commit"
 		//		metaphor, in practice people either ignore it or use it as a
 		//		generic description field which it isn't. On deprecation shortlist.
-		res.Set("created", fmt.Sprintf("%v", img.Created))
-		res.Set("author", img.Author)
-		res.Set("os", img.OS)
-		res.Set("architecture", img.Architecture)
-		res.Set("docker_version", img.DockerVersion)
-		res.Set("ID", img.ID)
+		res.SetAuto("Created", img.Created)
+		res.Set("Author", img.Author)
+		res.Set("Os", img.OS)
+		res.Set("Architecture", img.Architecture)
+		res.Set("DockerVersion", img.DockerVersion)
+		res.Set("Id", img.ID)
 		res.Set("Parent", img.Parent)
 	}
 	res.WriteTo(job.Stdout)
@@ -136,11 +127,33 @@ func (s *TagStore) CmdLookup(job *engine.Job) engine.Status {
 	}
 	name := job.Args[0]
 	if image, err := s.LookupImage(name); err == nil && image != nil {
-		b, err := json.Marshal(image)
-		if err != nil {
+		if job.GetenvBool("raw") {
+			b, err := image.RawJson()
+			if err != nil {
+				return job.Error(err)
+			}
+			job.Stdout.Write(b)
+			return engine.StatusOK
+		}
+
+		out := &engine.Env{}
+		out.Set("Id", image.ID)
+		out.Set("Parent", image.Parent)
+		out.Set("Comment", image.Comment)
+		out.SetAuto("Created", image.Created)
+		out.Set("Container", image.Container)
+		out.SetJson("ContainerConfig", image.ContainerConfig)
+		out.Set("DockerVersion", image.DockerVersion)
+		out.Set("Author", image.Author)
+		out.SetJson("Config", image.Config)
+		out.Set("Architecture", image.Architecture)
+		out.Set("Os", image.OS)
+		out.SetInt64("Size", image.Size)
+		out.SetInt64("VirtualSize", image.GetParentsSize(0)+image.Size)
+		out.Set("Checksum", image.Checksum)
+		if _, err = out.WriteTo(job.Stdout); err != nil {
 			return job.Error(err)
 		}
-		job.Stdout.Write(b)
 		return engine.StatusOK
 	}
 	return job.Errorf("No such image: %s", name)
@@ -159,12 +172,11 @@ func (s *TagStore) CmdTarLayer(job *engine.Job) engine.Status {
 		}
 		defer fs.Close()
 
-		if written, err := io.Copy(job.Stdout, fs); err != nil {
+		written, err := io.Copy(job.Stdout, fs)
+		if err != nil {
 			return job.Error(err)
-		} else {
-			utils.Debugf("rendered layer for %s of [%d] size", image.ID, written)
 		}
-
+		log.Debugf("rendered layer for %s of [%d] size", image.ID, written)
 		return engine.StatusOK
 	}
 	return job.Errorf("No such image: %s", name)

@@ -1,5 +1,151 @@
 # Changelog
 
+## 1.3.2 (2014-11-20)
+
+#### Security
+- Fix tar breakout vulnerability
+* Extractions are now sandboxed chroot
+- Security options are no longer committed to images
+
+#### Runtime
+- Fix deadlock in `docker ps -f exited=1`
+- Fix a bug when `--volumes-from` references a container that failed to start
+
+#### Registry
++ `--insecure-registry` now accepts CIDR notation such as 10.1.0.0/16
+* Private registries whose IPs fall in the 127.0.0.0/8 range do no need the `--insecure-registry` flag
+- Skip the experimental registry v2 API when mirroring is enabled
+
+## 1.3.1 (2014-10-28)
+
+#### Security
+* Prevent fallback to SSL protocols < TLS 1.0 for client, daemon and registry
++ Secure HTTPS connection to registries with certificate verification and without HTTP fallback unless `--insecure-registry` is specified
+
+#### Runtime
+- Fix issue where volumes would not be shared
+
+#### Client
+- Fix issue with `--iptables=false` not automatically setting `--ip-masq=false`
+- Fix docker run output to non-TTY stdout
+
+#### Builder
+- Fix escaping `$` for environment variables
+- Fix issue with lowercase `onbuild` Dockerfile instruction
+- Restrict environment variable expansion to `ENV`, `ADD`, `COPY`, `WORKDIR`, `EXPOSE`, `VOLUME` and `USER`
+
+## 1.3.0 (2014-10-14)
+
+#### Notable features since 1.2.0
++ Docker `exec` allows you to run additional processes inside existing containers
++ Docker `create` gives you the ability to create a container via the CLI without executing a process
++ `--security-opts` options to allow user to customize container labels and apparmor profiles
++ Docker `ps` filters
+- Wildcard support to COPY/ADD
++ Move production URLs to get.docker.com from get.docker.io
++ Allocate IP address on the bridge inside a valid CIDR
++ Use drone.io for PR and CI testing
++ Ability to setup an official registry mirror
++ Ability to save multiple images with docker `save`
+
+## 1.2.0 (2014-08-20)
+
+#### Runtime
++ Make /etc/hosts /etc/resolv.conf and /etc/hostname editable at runtime
++ Auto-restart containers using policies
++ Use /var/lib/docker/tmp for large temporary files
++ `--cap-add` and `--cap-drop` to tweak what linux capability you want
++ `--device` to use devices in containers
+
+#### Client
++ `docker search` on private registries
++ Add `exited` filter to `docker ps --filter`
+* `docker rm -f` now kills instead of stop
++ Support for IPv6 addresses in `--dns` flag
+
+#### Proxy
++ Proxy instances in separate processes
+* Small bug fix on UDP proxy
+
+## 1.1.2 (2014-07-23)
+
+#### Runtime
++ Fix port allocation for existing containers
++ Fix containers restart on daemon restart
+
+#### Packaging
++ Fix /etc/init.d/docker issue on Debian
+
+## 1.1.1 (2014-07-09)
+
+#### Builder
+* Fix issue with ADD
+
+## 1.1.0 (2014-07-03)
+
+#### Notable features since 1.0.1
++ Add `.dockerignore` support
++ Pause containers during `docker commit`
++ Add `--tail` to `docker logs`
+
+#### Builder
++ Allow a tar file as context for `docker build`
+* Fix issue with white-spaces and multi-lines in `Dockerfiles`
+
+#### Runtime
+* Overall performance improvements
+* Allow `/` as source of `docker run -v`
+* Fix port allocation
+* Fix bug in `docker save`
+* Add links information to `docker inspect`
+
+#### Client
+* Improve command line parsing for `docker commit`
+
+#### Remote API
+* Improve status code for the `start` and `stop` endpoints
+
+## 1.0.1 (2014-06-19)
+
+#### Notable features since 1.0.0
+* Enhance security for the LXC driver
+
+#### Builder
+* Fix `ONBUILD` instruction passed to grandchildren
+
+#### Runtime
+* Fix events subscription
+* Fix /etc/hostname file with host networking
+* Allow `-h` and `--net=none`
+* Fix issue with hotplug devices in `--privileged`
+
+#### Client
+* Fix artifacts with events
+* Fix a panic with empty flags
+* Fix `docker cp` on Mac OS X
+
+#### Miscellaneous
+* Fix compilation on Mac OS X
+* Fix several races
+
+## 1.0.0 (2014-06-09)
+
+#### Notable features since 0.12.0
+* Production support
+
+## 0.12.0 (2014-06-05)
+
+#### Notable features since 0.11.0
+* 40+ various improvements to stability, performance and usability
+* New `COPY` Dockerfile instruction to allow copying a local file from the context into the container without ever extracting if the file is a tar file
+* Inherit file permissions from the host on `ADD`
+* New `pause` and `unpause` commands to allow pausing and unpausing of containers using cgroup freezer
+* The `images` command has a `-f`/`--filter` option to filter the list of images
+* Add `--force-rm` to clean up after a failed build
+* Standardize JSON keys in Remote API to CamelCase
+* Pull from a docker run now assumes `latest` tag if not specified
+* Enhance security on Linux capabilities and device nodes
+
 ## 0.11.1 (2014-05-07)
 
 #### Registry
@@ -234,7 +380,7 @@
 - Add newlines to the JSON stream functions.
 
 #### Runtime
-* Do not ping the registry from the CLI. All requests to registres flow through the daemon.
+* Do not ping the registry from the CLI. All requests to registries flow through the daemon.
 - Check for nil information return in the lxc driver. This fixes panics with older lxc versions.
 - Devicemapper: cleanups and fix for unmount. Fixes two problems which were causing unmount to fail intermittently.
 - Devicemapper: remove directory when removing device. Directories don't get left behind when removing the device.
@@ -826,7 +972,7 @@ With the ongoing changes to the networking and execution subsystems of docker te
 
 + Add domainname support
 + Implement image filtering with path.Match
-* Remove unnecesasry warnings
+* Remove unnecessary warnings
 * Remove os/user dependency
 * Only mount the hostname file when the config exists
 * Handle signals within the `docker login` command
@@ -849,7 +995,7 @@ With the ongoing changes to the networking and execution subsystems of docker te
 + Hack: Vendor all dependencies
 * Remote API: Bump to v1.5
 * Packaging: Break down hack/make.sh into small scripts, one per 'bundle': test, binary, ubuntu etc.
-* Documentation: General improvments
+* Documentation: General improvements
 
 ## 0.6.1 (2013-08-23)
 
@@ -1119,7 +1265,7 @@ With the ongoing changes to the networking and execution subsystems of docker te
 * Prevent rm of running containers
 * Use go1.1 cookiejar
 - Fix issue detaching from running TTY container
-- Forbid parralel push/pull for a single image/repo. Fixes #311
+- Forbid parallel push/pull for a single image/repo. Fixes #311
 - Fix race condition within Run command when attaching.
 
 #### Client
@@ -1235,7 +1381,7 @@ With the ongoing changes to the networking and execution subsystems of docker te
 + Add caching to docker builder
 + Add support for docker builder with native API as top level command
 + Implement ENV within docker builder
-- Check the command existance prior create and add Unit tests for the case
+- Check the command existence prior create and add Unit tests for the case
 * use any whitespaces instead of tabs
 
 #### Runtime
@@ -1274,13 +1420,13 @@ With the ongoing changes to the networking and execution subsystems of docker te
 
 #### Runtime
 
-- Fix the command existance check
+- Fix the command existence check
 - strings.Split may return an empty string on no match
 - Fix an index out of range crash if cgroup memory is not
 
 #### Documentation
 
-* Various improvments
+* Various improvements
 + New example: sharing data between 2 couchdb databases
 
 #### Other
@@ -1310,7 +1456,7 @@ With the ongoing changes to the networking and execution subsystems of docker te
 ## 0.2.0 (2013-04-23)
 
 - Runtime: ghost containers can be killed and waited for
-* Documentation: update install intructions
+* Documentation: update install instructions
 - Packaging: fix Vagrantfile
 - Development: automate releasing binaries and ubuntu packages
 + Add a changelog

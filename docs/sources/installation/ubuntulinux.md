@@ -17,7 +17,7 @@ Please read [*Docker and UFW*](#docker-and-ufw), if you plan to use [UFW
 ## Ubuntu Trusty 14.04 (LTS) (64-bit)
 
 Ubuntu Trusty comes with a 3.13.0 Linux kernel, and a `docker.io` package which
-installs all its prerequisites from Ubuntu's repository.
+installs Docker 0.9.1 and all its prerequisites from Ubuntu's repository.
 
 > **Note**:
 > Ubuntu (and Debian) contain a much older KDE3/GNOME2 package called ``docker``, so the
@@ -29,15 +29,49 @@ To install the latest Ubuntu package (may not be the latest Docker release):
 
     $ sudo apt-get update
     $ sudo apt-get install docker.io
-    $ sudo ln -sf /usr/bin/docker.io /usr/local/bin/docker
-    $ sudo sed -i '$acomplete -F _docker docker' /etc/bash_completion.d/docker.io
+
+Then, to enable tab-completion of Docker commands in BASH, either restart BASH or:
+
+    $ source /etc/bash_completion.d/docker.io
+
+If you'd like to try the latest version of Docker:
+
+First, check that your APT system can deal with `https`
+URLs: the file `/usr/lib/apt/methods/https`
+should exist. If it doesn't, you need to install the package
+`apt-transport-https`.
+
+    [ -e /usr/lib/apt/methods/https ] || {
+      apt-get update
+      apt-get install apt-transport-https
+    }
+
+Then, add the Docker repository key to your local keychain.
+
+    $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
+
+Add the Docker repository to your apt sources list, update and install
+the `lxc-docker` package.
+
+*You may receive a warning that the package isn't trusted. Answer yes to
+continue installation.*
+
+    $ sudo sh -c "echo deb https://get.docker.com/ubuntu docker main\
+    > /etc/apt/sources.list.d/docker.list"
+    $ sudo apt-get update
+    $ sudo apt-get install lxc-docker
+
+> **Note**:
+>
+> There is also a simple `curl` script available to help with this process.
+>
+>     $ curl -sSL https://get.docker.com/ubuntu/ | sudo sh
 
 To verify that everything has worked as expected:
 
     $ sudo docker run -i -t ubuntu /bin/bash
 
 Which should download the `ubuntu` image, and then start `bash` in a container.
-
 
 ## Ubuntu Precise 12.04 (LTS) (64-bit)
 
@@ -55,9 +89,18 @@ VirtualBox guest additions. If you didn't install the headers for your
 "precise" kernel, then you can skip these headers for the "raring"
 kernel. But it is safer to include them if you're not sure.
 
+Please read the installation instructions for backported kernels at
+Ubuntu.org to understand why you also need to install the Xorg packages
+when running Docker on a machine with a graphical environment like Unity.
+[LTS Enablement Stack](https://wiki.ubuntu.com/Kernel/LTSEnablementStack) refer to note 5 under
+each version.
+
     # install the backported kernel
     $ sudo apt-get update
     $ sudo apt-get install linux-image-generic-lts-raring linux-headers-generic-lts-raring
+    
+    # install the backported kernel and xorg if using Unity/Xorg
+    $ sudo apt-get install --install-recommends linux-generic-lts-raring xserver-xorg-lts-raring libgl1-mesa-glx-lts-raring
 
     # reboot
     $ sudo reboot
@@ -93,7 +136,7 @@ the `lxc-docker` package.
 *You may receive a warning that the package isn't trusted. Answer yes to
 continue installation.*
 
-    $ sudo sh -c "echo deb https://get.docker.io/ubuntu docker main\
+    $ sudo sh -c "echo deb https://get.docker.com/ubuntu docker main\
     > /etc/apt/sources.list.d/docker.list"
     $ sudo apt-get update
     $ sudo apt-get install lxc-docker
@@ -102,7 +145,7 @@ continue installation.*
 > 
 > There is also a simple `curl` script available to help with this process.
 > 
->     $ curl -s https://get.docker.io/ubuntu/ | sudo sh
+>     $ curl -sSL https://get.docker.com/ubuntu/ | sudo sh
 
 Now verify that the installation has worked by downloading the
 `ubuntu` image and launching a container.
@@ -111,8 +154,7 @@ Now verify that the installation has worked by downloading the
 
 Type `exit` to exit
 
-**Done!**, now continue with the [*Hello
-World*](/examples/hello_world/#hello-world) example.
+**Done!**, continue with the [User Guide](/userguide/).
 
 ## Ubuntu Raring 13.04 and Saucy 13.10 (64 bit)
 
@@ -147,7 +189,7 @@ First add the Docker repository key to your local keychain.
 Add the Docker repository to your apt sources list, update and install
 the `lxc-docker` package.
 
-    $ sudo sh -c "echo deb http://get.docker.io/ubuntu docker main\
+    $ sudo sh -c "echo deb http://get.docker.com/ubuntu docker main\
     > /etc/apt/sources.list.d/docker.list"
     $ sudo apt-get update
     $ sudo apt-get install lxc-docker
@@ -159,10 +201,20 @@ Now verify that the installation has worked by downloading the
 
 Type `exit` to exit
 
-**Done!**, now continue with the [*Hello
-World*](/examples/hello_world/#hello-world) example.
+**Done!**, now continue with the [User Guide](/userguide/).
 
-### Giving non-root access
+### Upgrade
+
+To install the latest version of Docker, use the standard
+`apt-get` method:
+
+    # update your sources list
+    $ sudo apt-get update
+
+    # install the latest
+    $ sudo apt-get install lxc-docker
+
+## Giving non-root access
 
 The `docker` daemon always runs as the `root` user, and since Docker
 version 0.5.2, the `docker` daemon binds to a Unix socket instead of a
@@ -181,7 +233,7 @@ alternative group.
 > **Warning**: 
 > The `docker` group (or the group specified with the `-G` flag) is
 > `root`-equivalent; see [*Docker Daemon Attack Surface*](
-> /articles/security/#dockersecurity-daemon) details.
+> /articles/security/#dockersecurity-daemon) for details.
 
 **Example:**
 
@@ -198,34 +250,23 @@ alternative group.
     # If you are in Ubuntu 14.04, use docker.io instead of docker
     $ sudo service docker restart
 
-### Upgrade
-
-To install the latest version of docker, use the standard
-`apt-get` method:
-
-    # update your sources list
-    $ sudo apt-get update
-
-    # install the latest
-    $ sudo apt-get install lxc-docker
-
 ## Memory and Swap Accounting
 
 If you want to enable memory and swap accounting, you must add the
 following command-line parameters to your kernel:
 
-    $ cgroup_enable=memory swapaccount=1
+    cgroup_enable=memory swapaccount=1
 
 On systems using GRUB (which is the default for Ubuntu), you can add
 those parameters by editing `/etc/default/grub` and
 extending `GRUB_CMDLINE_LINUX`. Look for the
 following line:
 
-    $ GRUB_CMDLINE_LINUX=""
+    GRUB_CMDLINE_LINUX=""
 
 And replace it by the following one:
 
-    $ GRUB_CMDLINE_LINUX="cgroup_enable=memory swapaccount=1"
+    GRUB_CMDLINE_LINUX="cgroup_enable=memory swapaccount=1"
 
 Then run `sudo update-grub`, and reboot.
 
@@ -236,11 +277,11 @@ These parameters will help you get rid of the following warnings:
 
 ## Troubleshooting
 
-On Linux Mint, the `cgroup-lite` package is not
+On Linux Mint, the `cgroup-lite` and `apparmor` packages are not
 installed by default. Before Docker will work correctly, you will need
 to install this via:
 
-    $ sudo apt-get update && sudo apt-get install cgroup-lite
+    $ sudo apt-get update && sudo apt-get install cgroup-lite apparmor
 
 ## Docker and UFW
 
@@ -253,7 +294,7 @@ forwarding:
     # Change:
     # DEFAULT_FORWARD_POLICY="DROP"
     # to
-    $ DEFAULT_FORWARD_POLICY="ACCEPT"
+    DEFAULT_FORWARD_POLICY="ACCEPT"
 
 Then reload UFW:
 
@@ -261,9 +302,9 @@ Then reload UFW:
 
 UFW's default set of rules denies all incoming traffic. If you want to
 be able to reach your containers from another host then you should allow
-incoming connections on the Docker port (default 4243):
+incoming connections on the Docker port (default 2375):
 
-    $ sudo ufw allow 4243/tcp
+    $ sudo ufw allow 2375/tcp
 
 ## Docker and local DNS server warnings
 
@@ -286,7 +327,7 @@ Docker daemon for the containers:
     $ sudo nano /etc/default/docker
     ---
     # Add:
-    $ docker_OPTS="--dns 8.8.8.8"
+    DOCKER_OPTS="--dns 8.8.8.8"
     # 8.8.8.8 could be replaced with a local DNS server, such as 192.168.1.1
     # multiple DNS servers can be specified: --dns 8.8.8.8 --dns 192.168.1.1
 
@@ -317,7 +358,7 @@ NetworkManager and Docker need to be restarted afterwards:
 
 ## Mirrors
 
-You should `ping get.docker.io` and compare the
+You should `ping get.docker.com` and compare the
 latency to the following mirrors, and pick whichever one is best for
 you.
 
@@ -326,7 +367,7 @@ you.
 [Yandex](http://yandex.ru/) in Russia is mirroring the Docker Debian
 packages, updating every 6 hours.
 Substitute `http://mirror.yandex.ru/mirrors/docker/` for
-`http://get.docker.io/ubuntu` in the instructions above.
+`http://get.docker.com/ubuntu` in the instructions above.
 For example:
 
     $ sudo sh -c "echo deb http://mirror.yandex.ru/mirrors/docker/ docker main\

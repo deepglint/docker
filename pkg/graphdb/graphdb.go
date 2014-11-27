@@ -64,6 +64,11 @@ func IsNonUniqueNameError(err error) bool {
 	if strings.Contains(str, "UNIQUE constraint failed") && strings.Contains(str, "edge.name") {
 		return true
 	}
+	// sqlite-3.6.20-1.el6 returns:
+	// Set failure: Abort due to constraint violation: constraint failed
+	if strings.HasSuffix(str, "constraint failed") {
+		return true
+	}
 	return false
 }
 
@@ -126,8 +131,8 @@ func (db *Database) Set(fullPath, id string) (*Entity, error) {
 	if _, err := db.conn.Exec("BEGIN EXCLUSIVE"); err != nil {
 		return nil, err
 	}
-	var entityId string
-	if err := db.conn.QueryRow("SELECT id FROM entity WHERE id = ?;", id).Scan(&entityId); err != nil {
+	var entityID string
+	if err := db.conn.QueryRow("SELECT id FROM entity WHERE id = ?;", id).Scan(&entityID); err != nil {
 		if err == sql.ErrNoRows {
 			if _, err := db.conn.Exec("INSERT INTO entity (id) VALUES(?);", id); err != nil {
 				rollback()
@@ -276,6 +281,18 @@ func (db *Database) Children(name string, depth int) ([]WalkMeta, error) {
 	return db.children(e, name, depth, nil)
 }
 
+// Return the parents of a specified entity
+func (db *Database) Parents(name string) ([]string, error) {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
+
+	e, err := db.get(name)
+	if err != nil {
+		return nil, err
+	}
+	return db.parents(e)
+}
+
 // Return the refrence count for a specified id
 func (db *Database) Refs(id string) int {
 	db.mux.RLock()
@@ -303,14 +320,14 @@ func (db *Database) RefPaths(id string) Edges {
 
 	for rows.Next() {
 		var name string
-		var parentId string
-		if err := rows.Scan(&name, &parentId); err != nil {
+		var parentID string
+		if err := rows.Scan(&name, &parentID); err != nil {
 			return refs
 		}
 		refs = append(refs, &Edge{
 			EntityID: id,
 			Name:     name,
-			ParentID: parentId,
+			ParentID: parentID,
 		})
 	}
 	return refs
@@ -426,11 +443,11 @@ func (db *Database) children(e *Entity, name string, depth int, entities []WalkM
 	defer rows.Close()
 
 	for rows.Next() {
-		var entityId, entityName string
-		if err := rows.Scan(&entityId, &entityName); err != nil {
+		var entityID, entityName string
+		if err := rows.Scan(&entityID, &entityName); err != nil {
 			return nil, err
 		}
-		child := &Entity{entityId}
+		child := &Entity{entityID}
 		edge := &Edge{
 			ParentID: e.id,
 			Name:     entityName,
@@ -459,6 +476,28 @@ func (db *Database) children(e *Entity, name string, depth int, entities []WalkM
 	}
 
 	return entities, nil
+}
+
+func (db *Database) parents(e *Entity) (parents []string, err error) {
+	if e == nil {
+		return parents, nil
+	}
+
+	rows, err := db.conn.Query("SELECT parent_id FROM edge where entity_id = ?;", e.id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var parentID string
+		if err := rows.Scan(&parentID); err != nil {
+			return nil, err
+		}
+		parents = append(parents, parentID)
+	}
+
+	return parents, nil
 }
 
 // Return the entity based on the parent path and name

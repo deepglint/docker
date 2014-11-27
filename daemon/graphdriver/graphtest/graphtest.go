@@ -1,12 +1,14 @@
 package graphtest
 
 import (
-	"github.com/dotcloud/docker/daemon/graphdriver"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
 	"testing"
+
+	"github.com/docker/docker/daemon/graphdriver"
 )
 
 var (
@@ -19,6 +21,46 @@ type Driver struct {
 	refCount int
 }
 
+// InitLoopbacks ensures that the loopback devices are properly created within
+// the system running the device mapper tests.
+func InitLoopbacks() error {
+	stat_t, err := getBaseLoopStats()
+	if err != nil {
+		return err
+	}
+	// create atleast 8 loopback files, ya, that is a good number
+	for i := 0; i < 8; i++ {
+		loopPath := fmt.Sprintf("/dev/loop%d", i)
+		// only create new loopback files if they don't exist
+		if _, err := os.Stat(loopPath); err != nil {
+			if mkerr := syscall.Mknod(loopPath,
+				uint32(stat_t.Mode|syscall.S_IFBLK), int((7<<8)|(i&0xff)|((i&0xfff00)<<12))); mkerr != nil {
+				return mkerr
+			}
+			os.Chown(loopPath, int(stat_t.Uid), int(stat_t.Gid))
+		}
+	}
+	return nil
+}
+
+// getBaseLoopStats inspects /dev/loop0 to collect uid,gid, and mode for the
+// loop0 device on the system.  If it does not exist we assume 0,0,0660 for the
+// stat data
+func getBaseLoopStats() (*syscall.Stat_t, error) {
+	loop0, err := os.Stat("/dev/loop0")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &syscall.Stat_t{
+				Uid:  0,
+				Gid:  0,
+				Mode: 0660,
+			}, nil
+		}
+		return nil, err
+	}
+	return loop0.Sys().(*syscall.Stat_t), nil
+}
+
 func newDriver(t *testing.T, name string) *Driver {
 	root, err := ioutil.TempDir("/var/tmp", "docker-graphtest-")
 	if err != nil {
@@ -29,10 +71,10 @@ func newDriver(t *testing.T, name string) *Driver {
 		t.Fatal(err)
 	}
 
-	d, err := graphdriver.GetDriver(name, root)
+	d, err := graphdriver.GetDriver(name, root, nil)
 	if err != nil {
-		if err == graphdriver.ErrNotSupported {
-			t.Skip("Driver %s not supported", name)
+		if err == graphdriver.ErrNotSupported || err == graphdriver.ErrPrerequisites {
+			t.Skipf("Driver %s not supported", name)
 		}
 		t.Fatal(err)
 	}
@@ -94,10 +136,10 @@ func verifyFile(t *testing.T, path string, mode os.FileMode, uid, gid uint32) {
 
 	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
 		if stat.Uid != uid {
-			t.Fatal("%s no owned by uid %d", path, uid)
+			t.Fatalf("%s no owned by uid %d", path, uid)
 		}
 		if stat.Gid != gid {
-			t.Fatal("%s not owned by gid %d", path, gid)
+			t.Fatalf("%s not owned by gid %d", path, gid)
 		}
 	}
 

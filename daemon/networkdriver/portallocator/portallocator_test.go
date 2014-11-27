@@ -83,8 +83,11 @@ func TestReleaseUnreadledPort(t *testing.T) {
 	}
 
 	port, err = RequestPort(defaultIP, "tcp", 5000)
-	if err != ErrPortAlreadyAllocated {
-		t.Fatalf("Expected error %s got %s", ErrPortAlreadyAllocated, err)
+
+	switch err.(type) {
+	case ErrPortAlreadyAllocated:
+	default:
+		t.Fatalf("Expected port allocation error got %s", err)
 	}
 }
 
@@ -130,6 +133,19 @@ func TestAllocateAllPorts(t *testing.T) {
 	}
 	if newPort != port {
 		t.Fatalf("Expected port %d got %d", port, newPort)
+	}
+
+	// now pm.last == newPort, release it so that it's the only free port of
+	// the range, and ensure we get it back
+	if err := ReleasePort(defaultIP, "tcp", newPort); err != nil {
+		t.Fatal(err)
+	}
+	port, err = RequestPort(defaultIP, "tcp", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newPort != port {
+		t.Fatalf("Expected port %d got %d", newPort, port)
 	}
 }
 
@@ -209,5 +225,21 @@ func TestPortAllocation(t *testing.T) {
 	}
 	if port3 == port2 {
 		t.Fatal("Requesting a dynamic port should never allocate a used port")
+	}
+}
+
+func TestNoDuplicateBPR(t *testing.T) {
+	defer reset()
+
+	if port, err := RequestPort(defaultIP, "tcp", BeginPortRange); err != nil {
+		t.Fatal(err)
+	} else if port != BeginPortRange {
+		t.Fatalf("Expected port %d got %d", BeginPortRange, port)
+	}
+
+	if port, err := RequestPort(defaultIP, "tcp", 0); err != nil {
+		t.Fatal(err)
+	} else if port == BeginPortRange {
+		t.Fatalf("Acquire(0) allocated the same port twice: %d", port)
 	}
 }

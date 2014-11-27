@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/dotcloud/docker/daemon/graphdriver/devmapper"
+	"github.com/docker/docker/daemon/graphdriver/devmapper"
 	"os"
 	"path"
 	"sort"
@@ -60,6 +60,7 @@ func main() {
 
 	if *flDebug {
 		os.Setenv("DEBUG", "1")
+		log.SetLevel("debug")
 	}
 
 	if flag.NArg() < 1 {

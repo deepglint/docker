@@ -2,38 +2,61 @@ page_title: Installation on CentOS
 page_description: Instructions for installing Docker on CentOS
 page_keywords: Docker, Docker documentation, requirements, linux, centos, epel, docker.io, docker-io
 
-# CentOS 
+# CentOS
 
-> **Note**:
-> Docker is still under heavy development! We don't recommend using it in
-> production yet, but we're getting closer with each release. Please see
-> our blog post, [Getting to Docker 1.0](
-> http://blog.docker.io/2013/08/getting-to-docker-1-0/)
+While the Docker package is provided by default as part of CentOS-7,
+it is provided by the EPEL repository for CentOS-6. Please note that
+this changes the installation instructions slightly between versions. If you
+need the latest version, you can always use the latest binary which works on
+kernel 3.8 and above.
 
-> **Note**:
-> This is a community contributed installation path. The only `official`
-> installation is using the [*Ubuntu*](../ubuntulinux/#ubuntu-linux)
-> installation path. This version may be out of date because it depends on
-> some binaries to be updated and published.
+These instructions work for CentOS 6 and later. They will likely work for
+other binary compatible EL6 distributions such as Scientific Linux, but
+they haven't been tested.
 
-The Docker package is available via the EPEL repository. These instructions work
-for CentOS 6 and later. They will likely work for other binary compatible EL6 
-distributions such as Scientific Linux, but they haven't been tested.
-
-Please note that this package is part of [Extra Packages for Enterprise
-Linux (EPEL)](https://fedoraproject.org/wiki/EPEL), a community effort
-to create and maintain additional packages for the RHEL distribution.
-
-Also note that due to the current Docker limitations, Docker is able to
+Please note that due to the current Docker limitations, Docker is able to
 run only on the **64 bit** architecture.
 
-To run Docker, you will need [CentOS6](http://www.centos.org) or higher, with
-a kernel version 2.6.32-431 or higher as this has specific kernel fixes
-to allow Docker to run. 
+To run Docker, you will need [CentOS6](http://www.centos.org) or higher,
+with a kernel version 2.6.32-431 or higher as this has specific kernel
+fixes to allow Docker to run.
 
-## Installation
+## Installing Docker - CentOS-7
+Docker is included by default in the CentOS-Extras repository. To install
+simply run the following command.
 
-Firstly, you need to ensure you have the EPEL repository enabled. Please 
+    $ sudo yum install docker
+
+### Manual installation of latest version
+
+While using a package is the recommended way of installing Docker,
+the above package might not be the latest version. If you need the latest
+version, [you can install the binary directly](
+https://docs.docker.com/installation/binaries/).
+
+When installing the binary without a package, you may want
+to integrate Docker with systemd. For this, simply install the two unit files
+(service and socket) from [the github
+repository](https://github.com/docker/docker/tree/master/contrib/init/systemd)
+to `/etc/systemd/system`.
+
+### FirewallD
+
+CentOS-7 introduced firewalld, which is a wrapper around iptables and can
+conflict with Docker.
+
+When firewalld is started or restarted it will remove the `DOCKER` chain
+from iptables, preventing Docker from working properly.
+
+When using systemd, firewalld is started before Docker, but if you
+start or restart firewalld  after Docker, you will have to restart the Docker daemon.
+
+## Installing Docker - CentOS-6
+Please note that this for CentOS-6, this package is part of [Extra Packages
+for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL), a community effort
+to create and maintain additional packages for the RHEL distribution.
+
+Firstly, you need to ensure you have the EPEL repository enabled. Please
 follow the [EPEL installation instructions](
 https://fedoraproject.org/wiki/EPEL#How_can_I_use_these_extra_packages.3F).
 
@@ -50,7 +73,9 @@ will install Docker on our host.
 
     $ sudo yum install docker-io
 
-Now that it's installed, let's start the Docker daemon.
+## Using Docker
+
+Once Docker is installed, you will need to start the docker daemon.
 
     $ sudo service docker start
 
@@ -59,9 +84,9 @@ If we want Docker to start at boot, we should also:
     $ sudo chkconfig docker on
 
 Now let's verify that Docker is working. First we'll need to get the latest
-centos image.
+`centos` image.
 
-    $ sudo docker pull centos:latest
+    $ sudo docker pull centos
 
 Next we'll make sure that we can see the image by running:
 
@@ -73,15 +98,21 @@ This should generate some output similar to:
     REPOSITORY      TAG             IMAGE ID          CREATED             VIRTUAL SIZE
     centos          latest          0b443ba03958      2 hours ago         297.6 MB
 
-Run a simple bash shell to test the image:     
+Run a simple bash shell to test the image:
 
     $ sudo docker run -i -t centos /bin/bash
 
-If everything is working properly, you'll get a simple bash prompt. Type exit to continue.
+If everything is working properly, you'll get a simple bash prompt. Type
+exit to continue.
 
-**Done!**
-You can either continue with the [*Hello World*](/examples/hello_world/#hello-world) example,
-or explore and build on the images yourself.
+## Dockerfiles
+The CentOS Project provides a number of sample Dockerfiles which you may use
+either as templates or to familiarize yourself with docker. These templates
+are available on github at [https://github.com/CentOS/CentOS-Dockerfiles](
+https://github.com/CentOS/CentOS-Dockerfiles)
+
+**Done!** You can either continue with the [Docker User
+Guide](/userguide/) or explore and build on the images yourself.
 
 ## Issues?
 

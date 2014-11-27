@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"github.com/dotcloud/docker/engine"
+	"github.com/docker/docker/engine"
 )
 
 // Service exposes registry capabilities in the standard Engine
@@ -13,12 +13,15 @@ import (
 //  'pull': Download images from any registry (TODO)
 //  'push': Upload images to any registry (TODO)
 type Service struct {
+	insecureRegistries []string
 }
 
 // NewService returns a new instance of Service ready to be
 // installed no an engine.
-func NewService() *Service {
-	return &Service{}
+func NewService(insecureRegistries []string) *Service {
+	return &Service{
+		insecureRegistries: insecureRegistries,
+	}
 }
 
 // Install installs registry capabilities to eng.
@@ -32,25 +35,27 @@ func (s *Service) Install(eng *engine.Engine) error {
 // and returns OK if authentication was sucessful.
 // It can be used to verify the validity of a client's credentials.
 func (s *Service) Auth(job *engine.Job) engine.Status {
-	var (
-		err        error
-		authConfig = &AuthConfig{}
-	)
+	var authConfig = new(AuthConfig)
 
 	job.GetenvJson("authConfig", authConfig)
-	// TODO: this is only done here because auth and registry need to be merged into one pkg
+
 	if addr := authConfig.ServerAddress; addr != "" && addr != IndexServerAddress() {
-		addr, err = ExpandAndVerifyRegistryUrl(addr)
+		endpoint, err := NewEndpoint(addr, s.insecureRegistries)
 		if err != nil {
 			return job.Error(err)
 		}
-		authConfig.ServerAddress = addr
+		if _, err := endpoint.Ping(); err != nil {
+			return job.Error(err)
+		}
+		authConfig.ServerAddress = endpoint.String()
 	}
+
 	status, err := Login(authConfig, HTTPRequestFactory(nil))
 	if err != nil {
 		return job.Error(err)
 	}
 	job.Printf("%s\n", status)
+
 	return engine.StatusOK
 }
 
@@ -82,7 +87,16 @@ func (s *Service) Search(job *engine.Job) engine.Status {
 	job.GetenvJson("authConfig", authConfig)
 	job.GetenvJson("metaHeaders", metaHeaders)
 
-	r, err := NewRegistry(authConfig, HTTPRequestFactory(metaHeaders), IndexServerAddress())
+	hostname, term, err := ResolveRepositoryName(term)
+	if err != nil {
+		return job.Error(err)
+	}
+
+	endpoint, err := NewEndpoint(hostname, s.insecureRegistries)
+	if err != nil {
+		return job.Error(err)
+	}
+	r, err := NewSession(authConfig, HTTPRequestFactory(metaHeaders), endpoint, true)
 	if err != nil {
 		return job.Error(err)
 	}

@@ -2,17 +2,18 @@ package proxy
 
 import (
 	"encoding/binary"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
 	UDPConnTrackTimeout = 90 * time.Second
-	UDPBufSize          = 2048
+	UDPBufSize          = 65507
 )
 
 // A net.Addr where the IP is split into two fields so you can use it as a key
@@ -116,6 +117,7 @@ func (proxy *UDPProxy) Run() {
 			proxyConn, err = net.DialUDP("udp", nil, proxy.backendAddr)
 			if err != nil {
 				log.Printf("Can't proxy a datagram to udp/%s: %s\n", proxy.backendAddr, err)
+				proxy.connTrackLock.Unlock()
 				continue
 			}
 			proxy.connTrackTable[*fromKey] = proxyConn

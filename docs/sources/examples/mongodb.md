@@ -1,15 +1,14 @@
 page_title: Dockerizing MongoDB
-page_description: Creating a Docker image with MongoDB pre-installed using a Dockerfile and sharing the image on Docker.io
+page_description: Creating a Docker image with MongoDB pre-installed using a Dockerfile and sharing the image on Docker Hub
 page_keywords: docker, dockerize, dockerizing, article, example, docker.io, platform, package, installation, networking, mongodb, containers, images, image, sharing, dockerfile, build, auto-building, virtualization, framework
 
-# Dockerizing MongoDB 
+# Dockerizing MongoDB
 
 ## Introduction
 
-In this example, we are going to learn how to build a Docker image
-with MongoDB pre-installed.
-We'll also see how to `push` that image to the [Docker.io registry](
-https://index.docker.io) and share it with others!
+In this example, we are going to learn how to build a Docker image with
+MongoDB pre-installed.  We'll also see how to `push` that image to the
+[Docker Hub registry](https://hub.docker.com) and share it with others!
 
 Using Docker and containers for deploying [MongoDB](https://www.mongodb.org/)
 instances will bring several benefits, such as:
@@ -18,17 +17,10 @@ instances will bring several benefits, such as:
  - Ready to run and start working within milliseconds;
  - Based on globally accessible and shareable images.
 
-> **Note:** 
-> 
-> This example assumes you have Docker running in daemon mode. To verify,
-> try running `sudo docker info`.
-> For more information, please see: [*Check your Docker installation*](
-> /examples/hello_world/#running-examples).
-
 > **Note:**
 > 
 > If you do **_not_** like `sudo`, you might want to check out: 
-> [*Giving non-root access*](installation/binaries/#giving-non-root-access).
+> [*Giving non-root access*](/installation/binaries/#giving-non-root-access).
 
 ## Creating a Dockerfile for MongoDB
 
@@ -48,7 +40,7 @@ Although optional, it is handy to have comments at the beginning of a
 > the *parent* of your *Dockerized MongoDB* image.
 
 We will build our image using the latest version of Ubuntu from the
-[Docker.io Ubuntu](https://index.docker.io/_/ubuntu/) repository.
+[Docker Hub Ubuntu](https://registry.hub.docker.com/_/ubuntu/) repository.
 
     # Format: FROM    repository[:version]
     FROM       ubuntu:latest
@@ -73,13 +65,12 @@ a MongoDB repository file for the package manager.
 After this initial preparation we can update our packages and install MongoDB.
 
     # Update apt-get sources AND install MongoDB
-    RUN apt-get update
-    RUN apt-get install -y -q mongodb-org
+    RUN apt-get update && apt-get install -y mongodb-org
 
 > **Tip:** You can install a specific version of MongoDB by using a list
 > of required packages with versions, e.g.:
 > 
->     RUN apt-get install -y -q mongodb-org=2.6.1 mongodb-org-server=2.6.1 mongodb-org-shell=2.6.1 mongodb-org-mongos=2.6.1 mongodb-org-tools=2.6.1
+>     RUN apt-get update && apt-get install -y mongodb-org=2.6.1 mongodb-org-server=2.6.1 mongodb-org-shell=2.6.1 mongodb-org-mongos=2.6.1 mongodb-org-tools=2.6.1
 
 MongoDB requires a data directory. Let's create it as the final step of our
 installation instructions.
@@ -101,8 +92,7 @@ Now save the file and let's build our image.
 
 > **Note:**
 > 
-> The full version of this `Dockerfile` can be found [here](/
-> /examples/mongodb/Dockerfile).
+> The full version of this `Dockerfile` can be found [here](/examples/mongodb/Dockerfile).
 
 ## Building the MongoDB Docker image
 
@@ -117,10 +107,10 @@ experimenting, it is always a good practice to tag Docker images by passing the
 Once this command is issued, Docker will go through the `Dockerfile` and build
 the image. The final image will be tagged `my/repo`.
 
-## Pushing the MongoDB image to Docker.io
+## Pushing the MongoDB image to Docker Hub
 
 All Docker image repositories can be hosted and shared on
-[Docker.io](https://index.docker.io) with the `docker push` command. For this,
+[Docker Hub](https://hub.docker.com) with the `docker push` command. For this,
 you need to be logged-in.
 
     # Log-in
@@ -157,8 +147,6 @@ as daemon process(es).
     # Usage: mongo --port <port you get from `docker ps`> 
     $ mongo --port 12345
 
-## Learn more
-
- - [Linking containers](/use/working_with_links_names/)
- - [Cross-host linking containers](/use/ambassador_pattern_linking/)
- - [Creating a Trusted Build](/docker-io/builds/#trusted-builds)
+ - [Linking containers](/userguide/dockerlinks)
+ - [Cross-host linking containers](/articles/ambassador_pattern_linking/)
+ - [Creating an Automated Build](/docker-io/builds/#automated-builds)
